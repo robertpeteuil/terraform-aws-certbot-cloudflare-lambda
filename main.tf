@@ -2,6 +2,14 @@
 # AWS LAMBDA CERTBOT FOR CLOUDFLARE DOMAINS
 # -----------------------------------------------------------------
 
+terraform {
+  required_version = "~> 0.11.11"
+}
+
+provider "aws" {
+  region = "${var.aws_region}"
+}
+
 # Create random two digit number suffix (used to prevent duplicate names)
 resource "random_integer" "id" {
   keepers = {
