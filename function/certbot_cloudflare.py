@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
 """Cerbot management of LetsEncrypt Certificates for Cloudflare domains."""
 
-from __future__ import print_function
 import os
 import boto3
 import certbot.main
@@ -85,7 +83,3 @@ def sns_logit(domains):
     else:
         print("CERBOT_CLOUDFLARE - Issued new certificates for domains: " + domains)
     return
-
-
-if __name__ == '__main__':
-    main('', '')
