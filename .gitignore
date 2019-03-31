@@ -1,0 +1,9 @@
+docker-pin-version
+env
+*.tfstate
+*.tfstate.backup
+.terraform
+*.pyc
+*.zip.bak
+.vscode
+terraform.tfvars
