@@ -56,7 +56,7 @@ module "certbot_example" {
 }
 ```
 
-The file can be manually created as a text file in the format below and uploaded to the location: `$s3_bucket/$s3_path/dns/cloudflare.ini`
+The Cloudflare Credentials file can be manually created as a text file in the format below and uploaded to the location: `$s3_bucket/$s3_path/dns/cloudflare.ini`
 
 ``` ini
 dns_cloudflare_email = mycloudflareemail@domain.com
