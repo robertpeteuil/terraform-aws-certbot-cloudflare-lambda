@@ -42,7 +42,7 @@ Using the Module with optional `cloudflare` params to generate and upload Cloudf
 ``` ruby
 module "certbot_example" {
   source            = "robertpeteuil/certbot-cloudflare-lambda/aws"
-  version           = "1.1.2"
+  version           = "1.1.3"
 
   aws_region           = "us-west-2"
   letsencrypt_domains  = "example.com,www.example.com"
