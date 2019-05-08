@@ -12,7 +12,7 @@ This Module allows simple and rapid deployment
 - Uses specified S3 Bucket/Key for encrypted storage of Cloudflare API credentials and retrieved SSL Certificates.
 - Create CloudWatch Event to trigger function to renew certificates
 - Python function editable in repository and in Lambda UI
-- Python dependencies packages in Lambda Layers zip
+- Python dependencies packaged in Lambda Layers zip
   - Optionally create custom Lambda Layer zip using [build-lambda-layer-python](https://github.com/robertpeteuil/build-lambda-layer-python)
     - Enables adding/changing dependencies
     - Enables compiling for different version of Python
@@ -50,7 +50,8 @@ module "certbot_example" {
   s3_bucket            = "projectx"
   s3_path              = "certs"
 
-  # optional if file is manually created
+  # if specified, terraform will create and store cloudflare credentials file
+  #    alternatively, the file can be manually created as specified below
   cloudflare_api_key   = "key-654654a54c465c87d87f87fg6"
   cloudflare_email     = "mycloudflareemail@domain.com"
 }
