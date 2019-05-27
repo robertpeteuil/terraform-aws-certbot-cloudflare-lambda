@@ -2,21 +2,16 @@
 # AWS LAMBDA CERTBOT FOR CLOUDFLARE DOMAINS
 # -----------------------------------------------------------------
 
-terraform {
-  required_version = "~> 0.11.11"
-}
-
 provider "aws" {
-  region = "${var.aws_region}"
-
-  version = "~> 2.0"
+  region  = var.aws_region
+  version = ">= 2.12"
 }
 
 # Create random two digit number suffix (used to prevent duplicate names)
 resource "random_integer" "id" {
   keepers = {
     # generate new ID when value of domains changes
-    domains = "${var.letsencrypt_domains}"
+    domains = var.letsencrypt_domains
   }
 
   min = 1000
@@ -28,22 +23,23 @@ resource "random_integer" "id" {
 # -----------------------------------------------------------------
 
 data "template_file" "cloudflare_ini" {
-  count = "${length(var.cloudflare_api_key) > 0 ? length(var.cloudflare_email) > 0 ? 1 : 0 : 0}"
+  count = length(var.cloudflare_api_key) > 0 ? length(var.cloudflare_email) > 0 ? 1 : 0 : 0
 
-  template = "${file("templates/cloudflare_ini.tmpl")}"
+  template = file("templates/cloudflare_ini.tmpl")
 
   vars = {
-    cloudflare_email   = "${var.cloudflare_email}"
-    cloudflare_api_key = "${var.cloudflare_api_key}"
+    cloudflare_email   = var.cloudflare_email
+    cloudflare_api_key = var.cloudflare_api_key
   }
 }
 
 resource "aws_s3_bucket_object" "cloudflare_ini" {
-  count = "${length(var.cloudflare_api_key) > 0 ? length(var.cloudflare_email) > 0 ? 1 : 0 : 0}"
+  count = length(var.cloudflare_api_key) > 0 ? length(var.cloudflare_email) > 0 ? 1 : 0 : 0
 
-  bucket                 = "${var.s3_bucket}"
-  key                    = "${var.s3_path}/dns/cloudflare.ini"
-  content                = "${join("", data.template_file.cloudflare_ini.*.rendered)}"
+  bucket = var.s3_bucket
+  key    = "${var.s3_path}/dns/cloudflare.ini"
+  # content                = join("", data.template_file.cloudflare_ini.*.rendered)
+  content                = data.template_file.cloudflare_ini[0].rendered
   server_side_encryption = "AES256"
 }
 
@@ -53,12 +49,12 @@ resource "aws_s3_bucket_object" "cloudflare_ini" {
 
 resource "aws_lambda_layer_version" "certbot_base" {
   filename         = "${path.root}/base_${var.lambda_runtime}.zip"
-  source_code_hash = "${base64sha256(file("${path.root}/base_${var.lambda_runtime}.zip"))}"
+  source_code_hash = filebase64sha256("${path.root}/base_${var.lambda_runtime}.zip")
 
-  layer_name  = "certbot-cloudflare-base-${replace(var.lambda_runtime,".","")}"
+  layer_name  = "certbot-cloudflare-base-${replace(var.lambda_runtime, ".", "")}"
   description = "certbot with cloudflare dns plugin"
 
-  compatible_runtimes = ["${var.lambda_runtime}"]
+  compatible_runtimes = [var.lambda_runtime]
 }
 
 # -----------------------------------------------------------------
@@ -74,31 +70,31 @@ data "archive_file" "lambda_function" {
 
 # create lambda using function only zip on top of base layer
 resource "aws_lambda_function" "certbot_cloudflare" {
-  layers = ["${aws_lambda_layer_version.certbot_base.arn}"]
+  layers = [aws_lambda_layer_version.certbot_base.arn]
 
   filename         = "${path.root}/lambda.zip"
-  source_code_hash = "${data.archive_file.lambda_function.output_base64sha256}"
+  source_code_hash = data.archive_file.lambda_function.output_base64sha256
 
   function_name = "${var.lambda_func_name}-${random_integer.id.result}"
   description   = "${var.lambda_description}: ${var.letsencrypt_domains}"
 
-  publish     = "${var.lambda_publish_func ? 1 : 0}"
-  role        = "${aws_iam_role.lambda_new_funct.arn}"
-  runtime     = "${var.lambda_runtime}"
+  publish     = var.lambda_publish_func ? true : false
+  role        = aws_iam_role.lambda_new_funct.arn
+  runtime     = var.lambda_runtime
   handler     = "certbot_cloudflare.main"
-  timeout     = "${var.lambda_timeout}"
-  memory_size = "${var.lambda_mem_size}"
+  timeout     = var.lambda_timeout
+  memory_size = var.lambda_mem_size
 
-  tags = "${var.lambda_tags}"
+  tags = var.lambda_tags
 
   environment {
     variables = {
-      letsencrypt_domains = "${var.letsencrypt_domains}"
-      letsencrypt_email   = "${var.letsencrypt_email}"
-      s3_bucket           = "${var.s3_bucket}"
-      s3_path             = "${var.s3_path}"
-      test_cert           = "${var.get_test_cert}"
-      sns_topic_arn       = "${length(var.sns_topic) > 0 ? join("", data.aws_sns_topic.sns_log_topic.*.arn) : ""}"
+      letsencrypt_domains = var.letsencrypt_domains
+      letsencrypt_email   = var.letsencrypt_email
+      s3_bucket           = var.s3_bucket
+      s3_path             = var.s3_path
+      test_cert           = var.get_test_cert
+      sns_topic_arn       = length(var.sns_topic) > 0 ? data.aws_sns_topic.sns_log_topic[0].arn : ""
     }
   }
 }
@@ -110,14 +106,14 @@ resource "aws_lambda_function" "certbot_cloudflare" {
 # Create base IAM role
 resource "aws_iam_role" "lambda_new_funct" {
   name               = "lambda-${lower(var.lambda_func_name)}-${random_integer.id.result}"
-  assume_role_policy = "${data.aws_iam_policy_document.lambda_new_funct.json}"
+  assume_role_policy = data.aws_iam_policy_document.lambda_new_funct.json
 }
 
 # Add policy enabling access to other AWS services
 resource "aws_iam_role_policy" "lambda_new_funct_polcy" {
   name   = "lambda-${lower(var.lambda_func_name)}-policy-${random_integer.id.result}"
-  role   = "${aws_iam_role.lambda_new_funct.id}"
-  policy = "${length(var.sns_topic) > 0 ? join("", data.aws_iam_policy_document.lambda_new_funct_policy_sns.*.json) : join("", data.aws_iam_policy_document.lambda_new_funct_policy.*.json)}"
+  role   = aws_iam_role.lambda_new_funct.id
+  policy = length(var.sns_topic) > 0 ? data.aws_iam_policy_document.lambda_new_funct_policy_sns[0].json : data.aws_iam_policy_document.lambda_new_funct_policy[0].json
 }
 
 # JSON POLICY - assume role
@@ -125,7 +121,7 @@ data "aws_iam_policy_document" "lambda_new_funct" {
   statement {
     actions = ["sts:AssumeRole"]
 
-    principals = {
+    principals {
       type        = "Service"
       identifiers = ["lambda.amazonaws.com"]
     }
@@ -134,7 +130,7 @@ data "aws_iam_policy_document" "lambda_new_funct" {
 
 # JSON POLICY - Logs and S3 only (no SNS)
 data "aws_iam_policy_document" "lambda_new_funct_policy" {
-  count = "${length(var.sns_topic) > 0 ? 0 : 1}"
+  count = length(var.sns_topic) > 0 ? 0 : 1
 
   statement {
     actions = [
@@ -166,13 +162,13 @@ data "aws_iam_policy_document" "lambda_new_funct_policy" {
 
 # find sns topic arn, if specified (used by JSON policy)
 data "aws_sns_topic" "sns_log_topic" {
-  count = "${length(var.sns_topic) > 0 ? 1 : 0}"
-  name  = "${var.sns_topic}"
+  count = length(var.sns_topic) > 0 ? 1 : 0
+  name  = var.sns_topic
 }
 
 # JSON POLICY - Logs, S3 and SNS
 data "aws_iam_policy_document" "lambda_new_funct_policy_sns" {
-  count = "${length(var.sns_topic) > 0 ? 1 : 0}"
+  count = length(var.sns_topic) > 0 ? 1 : 0
 
   statement {
     actions = [
@@ -190,7 +186,7 @@ data "aws_iam_policy_document" "lambda_new_funct_policy_sns" {
       "sns:Publish",
     ]
 
-    resources = ["${join("", data.aws_sns_topic.sns_log_topic.*.arn)}"]
+    resources = [data.aws_sns_topic.sns_log_topic[0].arn]
   }
 
   statement {
@@ -216,7 +212,7 @@ data "aws_iam_policy_document" "lambda_new_funct_policy_sns" {
 
 # create cloudwatch event to run every 15 days
 resource "aws_cloudwatch_event_rule" "sched" {
-  count = "${var.create_sched_event ? 1 : 0}"
+  count = var.create_sched_event ? 1 : 0
 
   name                = "cert_renewal-${random_integer.id.result}"
   description         = "Trigger cert renewal via ${var.lambda_func_name}"
@@ -225,11 +221,11 @@ resource "aws_cloudwatch_event_rule" "sched" {
 
 # set event target as certbot_cloudflare lambda function 
 resource "aws_cloudwatch_event_target" "sched" {
-  count = "${var.create_sched_event ? 1 : 0}"
+  count = var.create_sched_event ? 1 : 0
 
-  rule      = "${aws_cloudwatch_event_rule.sched.name}"
+  rule      = aws_cloudwatch_event_rule.sched[0].name
   target_id = "Lambda"
-  arn       = "${var.lambda_publish_func ? aws_lambda_function.certbot_cloudflare.qualified_arn : aws_lambda_function.certbot_cloudflare.arn}"
+  arn       = var.lambda_publish_func ? aws_lambda_function.certbot_cloudflare.qualified_arn : aws_lambda_function.certbot_cloudflare.arn
 
   input = <<JSON
 {
@@ -238,6 +234,7 @@ resource "aws_cloudwatch_event_target" "sched" {
 	}]
 }
 JSON
+
 }
 
 # -----------------------------------------------------------------
@@ -246,24 +243,35 @@ JSON
 # -----------------------------------------------------------------
 
 # function published - "qualifier" parameter set to function version
-resource "aws_lambda_permission" "sched_published" {
-  count = "${var.create_sched_event ? var.lambda_publish_func ? 1 : 0 : 0}"
+# resource "aws_lambda_permission" "sched_published" {
+#   count = var.create_sched_event ? var.lambda_publish_func ? 1 : 0 : 0
 
-  statement_id  = "AllowExecutionFromCloudWatch"
-  action        = "lambda:InvokeFunction"
-  function_name = "${aws_lambda_function.certbot_cloudflare.function_name}"
-  principal     = "events.amazonaws.com"
-  source_arn    = "${aws_cloudwatch_event_rule.sched.arn}"
-  qualifier     = "${aws_lambda_function.certbot_cloudflare.version}"
-}
+#   statement_id = "AllowExecutionFromCloudWatch"
+#   action = "lambda:InvokeFunction"
+#   function_name = aws_lambda_function.certbot_cloudflare.function_name
+#   principal = "events.amazonaws.com"
+#   source_arn = aws_cloudwatch_event_rule.sched[0].arn
+#   qualifier = aws_lambda_function.certbot_cloudflare.version
+# }
 
-# function not published - "qualifier" parameter not be set
-resource "aws_lambda_permission" "sched" {
-  count = "${var.create_sched_event ? var.lambda_publish_func ? 0 : 1 : 0}"
+# # function not published - "qualifier" parameter not be set
+# resource "aws_lambda_permission" "sched" {
+#   count = var.create_sched_event ? var.lambda_publish_func ? 0 : 1 : 0
 
-  statement_id  = "AllowExecutionFromCloudWatch"
-  action        = "lambda:InvokeFunction"
-  function_name = "${aws_lambda_function.certbot_cloudflare.function_name}"
-  principal     = "events.amazonaws.com"
-  source_arn    = "${aws_cloudwatch_event_rule.sched.arn}"
+#   statement_id = "AllowExecutionFromCloudWatch"
+#   action = "lambda:InvokeFunction"
+#   function_name = aws_lambda_function.certbot_cloudflare.function_name
+#   principal = "events.amazonaws.com"
+#   source_arn = aws_cloudwatch_event_rule.sched[0].arn
+# }
+
+resource "aws_lambda_permission" "sched_multi" {
+  count = var.create_sched_event ? 1 : 0
+
+  statement_id = "AllowExecutionFromCloudWatch"
+  action = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.certbot_cloudflare.function_name
+  principal = "events.amazonaws.com"
+  source_arn = aws_cloudwatch_event_rule.sched[0].arn
+  qualifier = var.lambda_publish_func ? aws_lambda_function.certbot_cloudflare.version : null
 }
