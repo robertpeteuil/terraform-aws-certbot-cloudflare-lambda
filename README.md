@@ -4,13 +4,19 @@
 
 `terraform-aws-certbot-cloudflare-lambda` is a Terraform module to provision a Lambda Function which obtains & renews LetsEncrypt Certificates for domains using Cloudflare DNS.
 
+- *For Terraform versions > = 0.12, use module `version >= "2.0.0"`*
+- for Terraform versions < 0.12, use module `version = "1.1.4"`
+
 ## Terraform Module Features
 
 This Module allows simple and rapid deployment
 
 - Creates Lambda function, Lambda Layer, IAM Policies, Triggers, and Subscriptions
-- Uses specified S3 Bucket/Key for encrypted storage of Cloudflare API credentials and retrieved SSL Certificates.
-- Create CloudWatch Event to trigger function to renew certificates
+  - note: Terraform moduel doees _not_ trigger the function
+- Uses specified S3 Bucket/Key for encrypted storage of
+  - Cloudflare API credentials
+  - Retrieved SSL Certificates
+- Creates CloudWatch Event to trigger function to renew certificates
 - Python function editable in repository and in Lambda UI
 - Python dependencies packaged in Lambda Layers zip
   - Optionally create custom Lambda Layer zip using [build-lambda-layer-python](https://github.com/robertpeteuil/build-lambda-layer-python)
@@ -42,7 +48,8 @@ Using the Module with optional `cloudflare` params to generate and upload Cloudf
 ``` ruby
 module "certbot_example" {
   source            = "robertpeteuil/certbot-cloudflare-lambda/aws"
-  version           = "1.1.3"
+  version           = "2.0.0"     # HCL2 support - requires Terraform >= 0.12
+  # version         = "1.1.4"     # Latest version for Terraform < 0.12
 
   aws_region           = "us-west-2"
   letsencrypt_domains  = "example.com,www.example.com"
@@ -50,14 +57,14 @@ module "certbot_example" {
   s3_bucket            = "projectx"
   s3_path              = "certs"
 
-  # if specified, terraform will create and store cloudflare credentials file
-  #    alternatively, the file can be manually created as specified below
+  # OPTIONAL:  Terraform creates cloudflare credentials file and stores on S3
+  #   Alternatively, the credentials file can be manually created as specified below
   cloudflare_api_key   = "key-654654a54c465c87d87f87fg6"
   cloudflare_email     = "mycloudflareemail@domain.com"
 }
 ```
 
-The Cloudflare Credentials file can be manually created as a text file in the format below and uploaded to the location: `$s3_bucket/$s3_path/dns/cloudflare.ini`
+The Cloudflare credentials file can be created manually in the format below and uploaded to the location: `$s3_bucket/$s3_path/dns/cloudflare.ini`
 
 ``` ini
 dns_cloudflare_email = mycloudflareemail@domain.com
