@@ -45,10 +45,10 @@ The module authenticates to the cloudflare DNS by retrieving a Cloudflare Creden
 
 Using the Module with optional `cloudflare` params to generate and upload Cloudflare credential file to S3.
 
-``` ruby
+```hcl
 module "certbot_example" {
   source            = "robertpeteuil/certbot-cloudflare-lambda/aws"
-  version           = "2.0.0"     # HCL2 support - requires Terraform >= 0.12
+  version           = "2.0.1"     # HCL2 support - requires Terraform >= 0.12
   # version         = "1.1.4"     # Latest version for Terraform < 0.12
 
   aws_region           = "us-west-2"
@@ -66,7 +66,7 @@ module "certbot_example" {
 
 The Cloudflare credentials file can be created manually in the format below and uploaded to the location: `$s3_bucket/$s3_path/dns/cloudflare.ini`
 
-``` ini
+```ini
 dns_cloudflare_email = mycloudflareemail@domain.com
 dns_cloudflare_api_key = key-654654a54c465c87d87f87fg6
 ```
