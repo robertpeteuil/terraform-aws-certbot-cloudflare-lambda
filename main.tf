@@ -4,7 +4,6 @@
 
 provider "aws" {
   region  = var.aws_region
-  version = ">= 2.12"
 }
 
 # Create random two digit number suffix (used to prevent duplicate names)
@@ -23,18 +22,17 @@ resource "random_integer" "id" {
 # -----------------------------------------------------------------
 
 data "template_file" "cloudflare_ini" {
-  count = length(var.cloudflare_api_key) > 0 ? length(var.cloudflare_email) > 0 ? 1 : 0 : 0
+  count = length(var.cloudflare_api_token) > 0 ? 1 : 0
 
-  template = file("templates/cloudflare_ini.tmpl")
+  template = file("${path.module}/templates/cloudflare_ini.tmpl")
 
   vars = {
-    cloudflare_email   = var.cloudflare_email
-    cloudflare_api_key = var.cloudflare_api_key
+    cloudflare_api_token = var.cloudflare_api_token
   }
 }
 
 resource "aws_s3_bucket_object" "cloudflare_ini" {
-  count = length(var.cloudflare_api_key) > 0 ? length(var.cloudflare_email) > 0 ? 1 : 0 : 0
+  count = length(var.cloudflare_api_token) > 0 ? 1 : 0
 
   bucket = var.s3_bucket
   key    = "${var.s3_path}/dns/cloudflare.ini"
@@ -48,8 +46,8 @@ resource "aws_s3_bucket_object" "cloudflare_ini" {
 # -----------------------------------------------------------------
 
 resource "aws_lambda_layer_version" "certbot_base" {
-  filename         = "${path.root}/base_${var.lambda_runtime}.zip"
-  source_code_hash = filebase64sha256("${path.root}/base_${var.lambda_runtime}.zip")
+  filename         = "${path.module}/base_${var.lambda_runtime}.zip"
+  source_code_hash = filebase64sha256("${path.module}/base_${var.lambda_runtime}.zip")
 
   layer_name  = "certbot-cloudflare-base-${replace(var.lambda_runtime, ".", "")}"
   description = "certbot with cloudflare dns plugin"
@@ -64,15 +62,15 @@ resource "aws_lambda_layer_version" "certbot_base" {
 # make zip as script doesnt use a requirements.txt
 data "archive_file" "lambda_function" {
   type        = "zip"
-  source_file = "${path.root}/function/certbot_cloudflare.py"
-  output_path = "${path.root}/lambda.zip"
+  source_file = "${path.module}/function/certbot_cloudflare.py"
+  output_path = "${path.module}/lambda.zip"
 }
 
 # create lambda using function only zip on top of base layer
 resource "aws_lambda_function" "certbot_cloudflare" {
   layers = [aws_lambda_layer_version.certbot_base.arn]
 
-  filename         = "${path.root}/lambda.zip"
+  filename         = "${path.module}/lambda.zip"
   source_code_hash = data.archive_file.lambda_function.output_base64sha256
 
   function_name = "${var.lambda_func_name}-${random_integer.id.result}"

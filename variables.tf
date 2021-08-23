@@ -26,13 +26,8 @@ variable "s3_path" {
 # VARIABLES DEFINITIONS WITH DEFAULT VALUES
 # -----------------------------------------------------------------
 
-variable "cloudflare_api_key" {
-  description = "Cloudflare API Key.  If set - Terraform creates the credential file and uploads it to S3 for use by Lambda Function.  If not set - credential file must be created and manually placed in S3."
-  default     = ""
-}
-
-variable "cloudflare_email" {
-  description = "Cloudflare Email Address.  If set - Terraform creates the credential file and uploads it to S3 for use by Lambda Function.  If not set - credential file must be created and manually placed in S3."
+variable "cloudflare_api_token" {
+  description = "Cloudflare API token.  If set - Terraform creates the credential file and uploads it to S3 for use by Lambda Function.  If not set - credential file must be created and manually placed in S3."
   default     = ""
 }
 
@@ -78,7 +73,7 @@ variable "create_sched_event" {
 
 variable "lambda_runtime" {
   type        = string
-  default     = "python3.6"
+  default     = "python3.7"
   description = "Lambda runtime to use for the function."
 }
 
