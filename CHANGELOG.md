@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2021-08-23
+
+- updated Certbot to 1.18
+- updated certbot-dns-cloudflare
+- switched to Cloudflare API token auth
+- added wildcard domain certificate support
+- bumped Python runtime to 3.7
+
 ## [2.0.0] - 2019-05-27
 
 - update for HCL2 in Terraform versions > 0.12

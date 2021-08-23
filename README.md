@@ -1,12 +1,3 @@
-# terraform-aws-certbot-cloudflare-lambda
-
-[![Latest Release](https://img.shields.io/github/release/robertpeteuil/terraform-aws-certbot-cloudflare-lambda.svg)](https://github.com/robertpeteuil/terraform-aws-certbot-cloudflare-lambda) [![license](https://img.shields.io/github/license/robertpeteuil/terraform-aws-certbot-cloudflare-lambda.svg?colorB=2067b8)](https://github.com/robertpeteuil/terraform-aws-certbot-cloudflare-lambda)
-
-`terraform-aws-certbot-cloudflare-lambda` is a Terraform module to provision a Lambda Function which obtains & renews LetsEncrypt Certificates for domains using Cloudflare DNS.
-
-- *For Terraform versions > = 0.12, use module `version >= "2.0.0"`*
-- for Terraform versions < 0.12, use module `version = "1.1.4"`
-
 ## Terraform Module Features
 
 This Module allows simple and rapid deployment
@@ -22,6 +13,7 @@ This Module allows simple and rapid deployment
   - Optionally create custom Lambda Layer zip using [build-lambda-layer-python](https://github.com/robertpeteuil/build-lambda-layer-python)
     - Enables adding/changing dependencies
     - Enables compiling for different version of Python
+- Supports Cloudflare API tokens and wildcard domain certificates    
 
 ## Certbot Cloudflare Features
 
@@ -59,16 +51,14 @@ module "certbot_example" {
 
   # OPTIONAL:  Terraform creates cloudflare credentials file and stores on S3
   #   Alternatively, the credentials file can be manually created as specified below
-  cloudflare_api_key   = "key-654654a54c465c87d87f87fg6"
-  cloudflare_email     = "mycloudflareemail@domain.com"
+  cloudflare_api_token   = "654654a54c465c87dfdgdfgdf87f87fg6"
 }
 ```
 
 The Cloudflare credentials file can be created manually in the format below and uploaded to the location: `$s3_bucket/$s3_path/dns/cloudflare.ini`
 
 ```ini
-dns_cloudflare_email = mycloudflareemail@domain.com
-dns_cloudflare_api_key = key-654654a54c465c87d87f87fg6
+dns_cloudflare_api_token = 654654a54c465c87dfdgdfgdf87f87fg6
 ```
 
 > NOTE: Make sure you are using [version pinning](https://www.terraform.io/docs/modules/usage.html#module-versions) to avoid unexpected changes when the module is updated.
@@ -87,8 +77,7 @@ dns_cloudflare_api_key = key-654654a54c465c87d87f87fg6
 
 | Name | Description | Type | Default | Required |
 |------|-------------|:----:|:-----:|:-----:|
-| cloudflare_api_key | Cloudflare API Key | string | `` | no |
-| cloudflare_email | Cloudflare Email Address | string | `` | no |
+| cloudflare_token | Cloudflare Email Address | string | `` | no |
 | sns_topic | SNS Topic name used for logging | string | `` | no |
 | get_test_cert | Request Test certs | string | `false` | no |
 | lambda_tags | Mapping of Tags to assign to Lambda function | map | `{}` | no |
@@ -96,6 +85,6 @@ dns_cloudflare_api_key = key-654654a54c465c87d87f87fg6
 | lambda_description | Lambda Function Description | string | `LetsEncrypts Cert Manager for Cloudflare Domains` | no |
 | lambda_publish_func | Publish Lambda Function | string | `false` | no |
 | create_sched_event | Create event trigger to renew certs | string | `true` | no |
-| lambda_runtime | Lambda runtime for Function | string | `python3.6` | no |
+| lambda_runtime | Lambda runtime for Function | string | `python3.7` | no |
 | lambda_timeout | Function time-out (seconds) | string | `120` | no |
 | lambda_mem_size | Function RAM assigned (MB) | string | `128` | no |

@@ -37,6 +37,9 @@ def upload_to_s3(primary_domain, path, s3_bucket, s3_path):
     extra_args = {'ServerSideEncryption': 'AES256'}
     s3 = boto3.resource('s3')
 
+    primary_domain = primary_domain.replace("*.", "")
+    path = path.replace("*.", "")
+
     for keyname in ['fullchain.pem', 'privkey.pem', 'cert.pem', 'chain.pem']:
         dest_filename = "{}/live/{}/{}".format(s3_path, primary_domain, keyname)
         s3.meta.client.upload_file(path + keyname, s3_bucket, dest_filename, ExtraArgs=extra_args)
@@ -65,6 +68,7 @@ def provision_cert(email, domains):
     certbot.main.main(cert_config)
 
     primary_domain = domains.split(',')[0]
+
     path = '/tmp/config-dir/live/' + primary_domain + '/'
 
     return (primary_domain, path)
